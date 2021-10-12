@@ -69,12 +69,55 @@ def get_arguments():
                         default="OTU.fasta", help="Output file")
     return parser.parse_args()
 
+
 def read_fasta(amplicon_file, minseqlen):
-    pass
+    """"
+    
+    Parameters:
+        
+    Returns:
+        
+    """
+
+    path = isfile(amplicon_file)
+
+    with gzip.open(path, "rt") as file:
+        prot_dict = {}
+        prot_id = ""
+        for line in file:
+            if line.startswith(">"):
+                prot_id = line[1:].split()[0]
+                prot_dict[prot_id] = ""
+            else:
+                prot_dict[prot_id] += line.strip()
+        for i in prot_dict:
+            sequence = prot_dict[i]
+            if len(sequence) >= minseqlen:
+                yield sequence
+
+
 
 
 def dereplication_fulllength(amplicon_file, minseqlen, mincount):
-    pass
+    """"
+    
+    Parameters:
+        
+    Returns:
+        
+    """
+    occurence = {}
+    for sequence in read_fasta(amplicon_file, minseqlen):
+        if sequence not in occurence:
+            occurence[sequence] = 0
+        occurence[sequence] += 1
+
+    occu_sorted = {key: value for key, value in sorted(occurence.items(), key=lambda item: item[1], reverse = True)}
+
+    for  seq, occu in occu_sorted.items():
+        if occu >= mincount:
+            yield [seq, occu]
+
 
 
 def get_unique(ids):
@@ -105,6 +148,7 @@ def get_identity(alignment_list):
     """Prend en une liste de séquences alignées au format ["SE-QUENCE1", "SE-QUENCE2"]
     Retourne le pourcentage d'identite entre les deux."""
     id_nu = 0
+
     for i in range(len(alignment_list[0])):
         if alignment_list[0][i] == alignment_list[1][i]:
             id_nu += 1
@@ -114,14 +158,44 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     pass
 
 def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
-    pass
+    """"
+    
+    Parameters:
+        
+    Returns:
+        
+    """
+    otu = []
+    seq_occu = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
+    for index, item  in enumerate(seq_occu):
+        if index == 0:
+            otu.append(item)
+        else :
+            for index_otu in range (len(otu)):
+                align = nw.global_align(otu[index_otu][0], seq_occu[index][0], 
+                        gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
+                if get_identity(align) <= 97:
+                    otu.append(item)
+    return otu
+
+
 
 def fill(text, width=80):
     """Split text with a line return to respect fasta format"""
     return os.linesep.join(text[i:i+width] for i in range(0, len(text), width))
 
 def write_OTU(OTU_list, output_file):
-    pass
+    """"
+    
+    Parameters:
+        
+    Returns:
+        
+    """
+    with open(output_file, "w", encoding="utf-8") as file:
+        for index, otu in enumerate(OTU_list):
+            file.write(">OTU_" + str(index +1) + " occurrence:" + str(otu[1]) + "\n")
+            file.write(fill(otu[0]) + "\n")
 
 #==============================================================
 # Main program
@@ -134,6 +208,14 @@ def main():
     args = get_arguments()
     # Votre programme ici
 
+#    read_fasta("data/amplicon.fasta.gz",50)
 
-if __name__ == '__main__':
-    main()
+
+#if __name__ == '__main__':
+#    main()
+
+
+def main_test():
+    abundance_greedy_clustering("tests/test_sequences.fasta.gz", 200, 3, 50, 8)
+
+main_test()
