@@ -154,8 +154,39 @@ def get_identity(alignment_list):
             id_nu += 1
     return round(100.0 * id_nu / len(alignment_list[0]), 2)
 
+
+
 def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
-    pass
+    """"
+    
+    Parameters:
+        
+    Returns:
+        
+    """
+    seq_occu = dereplication_fulllength(amplicon_file, minseqlen, mincount)
+    kmer_dict = {}
+    
+ 
+    for seq, occu in seq_occu:
+        chimera = False
+        chunk_list = get_chunks(seq, chunk_size)
+        id_mat = []
+        for chunk in chunk_list:
+            mates = search_mates(kmer_dict, chunk, kmer_size)
+        if len(mates) >= 2:
+            for _ in range(len(chunk_list)):
+                line = []
+                line.append(get_identity(nw.global_align(seq, mates[0][0])))
+                line.append(get_identity(nw.global_align(seq, mates[1][0])))
+                id_mat.append(line)
+            chimera = detect_chimera(id_mat)
+        if not chimera :
+            yield([seq, occu])
+
+
+
+
 
 def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     """"
@@ -197,6 +228,91 @@ def write_OTU(OTU_list, output_file):
             file.write(">OTU_" + str(index +1) + " occurrence:" + str(otu[1]) + "\n")
             file.write(fill(otu[0]) + "\n")
 
+
+def get_unique_kmer(kmer_dict, seq, seq_id, kmer_size):
+    """"
+    
+    Parameters:
+        
+    Returns:
+        
+    """
+    kmer_list = list(cut_kmer(seq, kmer_size))
+    for kmer in kmer_list:
+        if kmer in kmer_dict:
+            list_id = kmer_dict[kmer]
+            list_id.append(seq_id)
+            kmer_dict[kmer] = list_id
+        else:
+            kmer_dict[kmer] = [seq_id]
+    return kmer_dict
+
+
+
+def search_mates(kmer_dict, chunk, kmer_size):
+    """"
+    
+    Parameters:
+        
+    Returns:
+    
+    """
+    kmer_list = list(cut_kmer(chunk, kmer_size))
+    id_list = []
+    best_match = []
+    for kmer in kmer_list:
+        if kmer in kmer_dict.keys():
+            id_list.extend(kmer_dict[kmer])
+    
+    for best_id in Counter(id_list).most_common(2) :
+        best_match.append(best_id[0])
+    return best_match
+    
+
+
+def detect_chimera(perc_identity_matrix):
+    """"
+    
+    Parameters:
+        
+    Returns:
+    
+    """
+    std_list = []
+    bool_result = False
+    boo_seq1 = False
+    bool_seq2 = False
+
+    for perc_id in perc_identity_matrix:
+        std_list.append(std(perc_id))
+        if perc_id[0] > perc_id[1]:
+            boo_seq1 = True
+        else:
+            bool_seq2 = True
+        if(boo_seq1 & bool_seq2):
+            break
+    
+    if statistics.mean(std_list) > 5:
+        if(boo_seq1 & bool_seq2):
+            bool_result = True
+    else:
+        bool_result = False
+    return bool_result
+
+
+
+def std(data):
+    """
+    Standard deviation
+
+    Parameters:
+        data: List of values
+    Returns:
+        Return the standard deviation
+    """
+    return statistics.stdev(data)
+        
+
 #==============================================================
 # Main program
 #==============================================================
@@ -216,6 +332,7 @@ def main():
 
 
 def main_test():
-    abundance_greedy_clustering("tests/test_sequences.fasta.gz", 200, 3, 50, 8)
-
+    chimerafree = chimera_removal(os.path.abspath(os.path.join("tests/test_sequences.fasta.gz")),
+        200, 3, 50, 8)
+    
 main_test()
