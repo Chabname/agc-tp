@@ -55,7 +55,7 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=__doc__, usage=
                                      "{0} -h"
                                      .format(sys.argv[0]))
-    parser.add_argument('-i', '-amplicon_file', dest='amplicon_file', type=isfile, required=True, 
+    parser.add_argument('-i', '-amplicon_file', dest='amplicon_file', type=isfile, required=True,
                         help="Amplicon is a compressed fasta file (.fasta.gz)")
     parser.add_argument('-s', '-minseqlen', dest='minseqlen', type=int, default = 400,
                         help="Minimum sequence length for dereplication (default 400)")
@@ -72,7 +72,7 @@ def get_arguments():
 
 def read_fasta(amplicon_file, minseqlen):
     """"
-    
+    Generate 
     Parameters:
         
     Returns:
@@ -168,21 +168,22 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     kmer_dict = {}
     
  
-    for seq, occu in seq_occu:
+    for index, item in enumerate(seq_occu):
         chimera = False
-        chunk_list = get_chunks(seq, chunk_size)
+        chunk_list = get_chunks(item[0], chunk_size)
         id_mat = []
         for chunk in chunk_list:
             mates = search_mates(kmer_dict, chunk, kmer_size)
         if len(mates) >= 2:
             for _ in range(len(chunk_list)):
                 line = []
-                line.append(get_identity(nw.global_align(seq, mates[0][0])))
-                line.append(get_identity(nw.global_align(seq, mates[1][0])))
+                line.append(get_identity(nw.global_align(item[0], mates[0][0])))
+                line.append(get_identity(nw.global_align(item[0], mates[1][0])))
                 id_mat.append(line)
             chimera = detect_chimera(id_mat)
+        kmer_dict = get_unique_kmer(kmer_dict, item[0], index, kmer_size)
         if not chimera :
-            yield([seq, occu])
+            yield([item[0], item[1]])
 
 
 
