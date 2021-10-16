@@ -23,12 +23,12 @@ from collections import Counter
 # ftp://ftp.ncbi.nih.gov/blast/matrices/
 import nwalign3 as nw
 
-__author__ = "Your Name"
+__author__ = "GHASSEMI Chabname / SHOKOR Fatima"
 __copyright__ = "Universite Paris Diderot"
-__credits__ = ["Your Name"]
+__credits__ = ["GHASSEMI Chabname / SHOKOR Fatima"]
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "Your Name"
+__maintainer__ = "GHASSEMI Chabname / SHOKOR Fatima"
 __email__ = "your@email.fr"
 __status__ = "Developpement"
 
@@ -72,11 +72,12 @@ def get_arguments():
 
 def read_fasta(amplicon_file, minseqlen):
     """"
-    Generate 
+    Lecture d'un fichier fasta et renvoi un générateur de séquence
     Parameters:
-        
+        amplicon_file : fichier fasta.gz 
+        minseqlen : longueur minimale des séquences 
     Returns:
-        
+        générateur de séquences de longueur l
     """
 
     path = isfile(amplicon_file)
@@ -100,11 +101,14 @@ def read_fasta(amplicon_file, minseqlen):
 
 def dereplication_fulllength(amplicon_file, minseqlen, mincount):
     """"
-    
+        Générateur de séquence ayant une occurence supérieru ou égale mincount
     Parameters:
-        
+        amplicon_file : fichier fasta.gz
+        minseqlen : longueur minimale des séquences
+        mincount :  comptage minimum
     Returns:
-        
+        un générateur des séquences uniques ayant une occurrence 
+        O>=mincount ainsi que leur occurrence, par ordre décroissant
     """
     occurence = {}
     for sequence in read_fasta(amplicon_file, minseqlen):
@@ -191,11 +195,14 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
 
 def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     """"
-    
+        Création d'une liste d'OTU
     Parameters:
-        
+        Parameters:
+        amplicon_file : fichier fasta.gz
+        minseqlen : longueur minimale des séquences
+        mincount :  comptage minimum
     Returns:
-        
+        Une liste d’OTU, cette liste indiquera pour chaque séquence son occurrence (count)
     """
     otu = []
     seq_occu = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
@@ -218,11 +225,12 @@ def fill(text, width=80):
 
 def write_OTU(OTU_list, output_file):
     """"
-    
+        Ecriture des OTU
     Parameters:
-        
+        OTU_list : Liste d'OTU
+        output_file : chemin fichier de sortie
     Returns:
-        
+        Ficher avec la liste des OTU
     """
     with open(output_file, "w", encoding="utf-8") as file:
         for index, otu in enumerate(OTU_list):
@@ -232,11 +240,14 @@ def write_OTU(OTU_list, output_file):
 
 def get_unique_kmer(kmer_dict, seq, seq_id, kmer_size):
     """"
-    
+        Creation dictionnaire de kmer unique
     Parameters:
-        
+        kmer_dict : dictionnaire de kmer ayant pour valeur une liste d’identifiant des séquences
+        seq : séquences 
+        seq_id : identifiant des séquences
+        kmer_size : taille kmer
     Returns:
-        
+        Un dictionnaire de kmer contenant les kmers uniques présents dans chaque séquence pour une longueur de donnée de kmer
     """
     kmer_list = list(cut_kmer(seq, kmer_size))
     for kmer in kmer_list:
