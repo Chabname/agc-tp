@@ -162,11 +162,15 @@ def get_identity(alignment_list):
 
 def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     """"
-    
+        Détecte et retire les chimère
     Parameters:
-        
+        amplicon_file : fichier fasta.gz
+        minseqlen : longueur minimale des séquences
+        mincount :  comptage minimum
+        chunk_size : taille du chunk
+        kmer_size : taille kmer
     Returns:
-        
+        Un générateur des séquences non chimérique
     """
     seq_occu = dereplication_fulllength(amplicon_file, minseqlen, mincount)
     kmer_dict = {}
@@ -263,11 +267,13 @@ def get_unique_kmer(kmer_dict, seq, seq_id, kmer_size):
 
 def search_mates(kmer_dict, chunk, kmer_size):
     """"
-    
+        Détection des séqences parentes
     Parameters:
-        
+        kmer_dict : dictionnaire de kmer ayant pour valeur une liste d’identifiant des séquences
+        chunk : sequences splitted in 4
+        kmer_size : taille kmer
     Returns:
-    
+        Identifie 2 séquences parentes dans kmer_dict présentant le plus de k-mer en commun avec notre chunk candidat
     """
     kmer_list = list(cut_kmer(chunk, kmer_size))
     id_list = []
@@ -284,11 +290,12 @@ def search_mates(kmer_dict, chunk, kmer_size):
 
 def detect_chimera(perc_identity_matrix):
     """"
-    
+        Détection de chimère
     Parameters:
-        
+        perc_identity_matrix : matrice donnant par segment le taux d’identité
+                            entre la séquence candidate et deux séquences parentes au format
     Returns:
-    
+        Booléen indiquant si la séquence candidate est une chimère (True) ou ne l’est pas (False)
     """
     std_list = []
     bool_result = False
