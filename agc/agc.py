@@ -344,16 +344,10 @@ def main():
     # Get arguments
     args = get_arguments()
     # Votre programme ici
-
-#    read_fasta("data/amplicon.fasta.gz",50)
-
-
-#if __name__ == '__main__':
-#    main()
+    otu_list = abundance_greedy_clustering(args.i, args.s, args.m, args.c, args.k)
+    write_OTU(otu_list, args.o)
 
 
-def main_test():
-    chimerafree = chimera_removal(os.path.abspath(os.path.join("tests/test_sequences.fasta.gz")),
-        200, 3, 50, 8)
-    
-main_test()
+
+if __name__ == '__main__':
+    main()
