@@ -205,11 +205,13 @@ def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, 
         amplicon_file : fichier fasta.gz
         minseqlen : longueur minimale des séquences
         mincount :  comptage minimum
+        chunk_size : taille du chunk
+        kmer_size : taille kmer
     Returns:
         Une liste d’OTU, cette liste indiquera pour chaque séquence son occurrence (count)
     """
     otu = []
-    seq_occu = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
+    seq_occu = list(chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size))
     for index, item  in enumerate(seq_occu):
         if index == 0:
             otu.append(item)
