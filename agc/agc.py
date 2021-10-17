@@ -192,7 +192,7 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
                     align_p1 = nw.global_align(item[0], chunk_list[mates[0]], 
                         gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
                     perc_id_p1 = get_identity(align_p1)
-                    align_p2 = nw.global_align(item[0], chunk_list[mates[0]], 
+                    align_p2 = nw.global_align(item[0], chunk_list[mates[1]], 
                         gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
                     perc_id_p2 = get_identity(align_p2)
                     id_mat.append([perc_id_p1, perc_id_p2])
