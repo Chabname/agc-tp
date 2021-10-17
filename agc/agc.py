@@ -174,21 +174,31 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     """
     seq_occu = dereplication_fulllength(amplicon_file, minseqlen, mincount)
     kmer_dict = {}
-    
+    mates_list = []
+    mates = []
+    com = []
+    id_mat = []
  
     for index, item in enumerate(seq_occu):
         chimera = False
         chunk_list = get_chunks(item[0], chunk_size)
-        id_mat = []
         for chunk in chunk_list:
-            mates = search_mates(kmer_dict, chunk, kmer_size)
-        if len(mates) >= 2:
-            for _ in range(len(chunk_list)):
-                line = []
-                line.append(get_identity(nw.global_align(item[0], mates[0][0])))
-                line.append(get_identity(nw.global_align(item[0], mates[1][0])))
-                id_mat.append(line)
-            chimera = detect_chimera(id_mat)
+            mates_list.append(search_mates(kmer_dict, chunk, kmer_size))
+        
+
+        for mates in mates_list:
+            if len(mates) >= 2:
+                for _ in range(len(chunk_list)):
+                    align_p1 = nw.global_align(item[0], chunk_list[mates[0]], 
+                        gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
+                    perc_id_p1 = get_identity(align_p1)
+                    align_p2 = nw.global_align(item[0], chunk_list[mates[0]], 
+                        gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
+                    perc_id_p2 = get_identity(align_p2)
+                    id_mat.append([perc_id_p1, perc_id_p2])
+                print(id_mat)
+                chimera = detect_chimera(id_mat)
+                print('here')
         kmer_dict = get_unique_kmer(kmer_dict, item[0], index, kmer_size)
         if not chimera :
             yield([item[0], item[1]])
@@ -344,8 +354,8 @@ def main():
     # Get arguments
     args = get_arguments()
     # Votre programme ici
-    otu_list = abundance_greedy_clustering(args.i, args.s, args.m, args.c, args.k)
-    write_OTU(otu_list, args.o)
+    otu_list = abundance_greedy_clustering(args.amplicon_file, args.minseqlen, args.mincount, args.chunk_size, args.kmer_size)
+    write_OTU(otu_list, args.output_file )
 
 
 
