@@ -175,40 +175,44 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     seq_occu = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
     kmer_dict = get_unique_kmer({}, seq_occu[0][0], 0, kmer_size)
     kmer_dict = get_unique_kmer(kmer_dict, seq_occu[1][0], 1, kmer_size)
-    
-    mates = []
-    
+    yield seq_occu[0]
+    yield seq_occu[1]
+    prog = 0
  
     for index, item in enumerate(seq_occu):
-        chimera = False
-        chunk_list = get_chunks(item[0], chunk_size)
-        mates_list = []
-        id_mat = []
-        parent1_chunk = []
-        parent2_chunk = []
+        if index > 2:
+            progress(prog, len(seq_occu), status='Chimera removal')
 
-        for chunk in chunk_list:
-            mates_list.append(sorted(search_mates(kmer_dict, chunk, kmer_size)))
+            chimera = False
+            chunk_list = get_chunks(item[0], chunk_size)
+            mates_list = []
+            id_mat = []
+            parent1_chunk = []
+            parent2_chunk = []
 
-        
-        for chunk_parent in mates_list:
-            parent1_chunk.append(get_chunks(seq_occu[chunk_parent[0]][0],chunk_size))
-            parent2_chunk.append(get_chunks(seq_occu[chunk_parent[1]][0],chunk_size))
+            for chunk in chunk_list:
+                mates_list.append(sorted(search_mates(kmer_dict, chunk, kmer_size)))
 
-        for mates in mates_list:
-            if len(mates) >= 2:
-                for chunk_id in range(len(chunk_list)):
-                    align_p1 = nw.global_align(chunk_list[chunk_id], parent1_chunk[chunk_id][chunk_id], 
-                        gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
-                    perc_id_p1 = get_identity(align_p1)
-                    align_p2 = nw.global_align(chunk_list[chunk_id], parent2_chunk[chunk_id][chunk_id], 
-                        gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
-                    perc_id_p2 = get_identity(align_p2)
-                    id_mat.append([perc_id_p1, perc_id_p2])
-                chimera = detect_chimera(id_mat)
-        if not chimera :
-            kmer_dict = get_unique_kmer(kmer_dict, item[0], index, kmer_size)
-            yield([item[0], item[1]])
+
+            for chunk_parent in mates_list:
+                parent1_chunk.append(get_chunks(seq_occu[chunk_parent[0]][0],chunk_size))
+                parent2_chunk.append(get_chunks(seq_occu[chunk_parent[1]][0],chunk_size))
+
+
+            for chunk_id in range(4):
+                align_p1 = nw.global_align(chunk_list[chunk_id], parent1_chunk[chunk_id][chunk_id], 
+                    gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
+                perc_id_p1 = get_identity(align_p1)
+                align_p2 = nw.global_align(chunk_list[chunk_id], parent2_chunk[chunk_id][chunk_id], 
+                    gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
+                perc_id_p2 = get_identity(align_p2)
+                id_mat.append([perc_id_p1, perc_id_p2])
+            chimera = detect_chimera(id_mat)
+
+            if not chimera :
+                kmer_dict = get_unique_kmer(kmer_dict, item[0], index, kmer_size)
+                yield([item[0], item[1]])
+            prog +=1
 
 
 
@@ -226,17 +230,26 @@ def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, 
     Returns:
         Une liste d’OTU, cette liste indiquera pour chaque séquence son occurrence (count)
     """
+    prog = 0
     otu = []
     seq_occu = list(chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size))
-    for index, item  in enumerate(seq_occu):
-        if index == 0:
-            otu.append(item)
-        else :
-            for index_otu in range (len(otu)):
-                align = nw.global_align(otu[index_otu][0], seq_occu[index][0], 
+    seq_size = len(seq_occu)
+    otu_mother = []
+
+    for index in range(seq_size):
+        progress(prog, len(seq_occu), status='Abundance greedy clustering')
+
+        if seq_occu[index] not in otu_mother:
+            temp = [seq_occu[index]]   
+            for index_otu in range (index+1, seq_size):
+                align = nw.global_align(seq_occu[index][0], seq_occu[index_otu][0], 
                         gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
-                if get_identity(align) <= 97:
-                    otu.append(item)
+                if get_identity(align) > 97:
+                    temp.append(seq_occu[index_otu])
+            otu.append(temp[0])
+
+            otu_mother += temp
+        prog += 1
     return otu
 
 
@@ -349,6 +362,14 @@ def std(data):
     """
     return statistics.stdev(data)
         
+
+def progress(count, total, status=''):
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+    percents = round(100.0 * count / float(total), 1)
+    bar = '#' * filled_len + '.' * (bar_len - filled_len)
+    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
+    sys.stdout.flush()
 
 #==============================================================
 # Main program
