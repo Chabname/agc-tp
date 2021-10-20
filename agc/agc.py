@@ -172,37 +172,43 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     Returns:
         Un générateur des séquences non chimérique
     """
-    seq_occu = dereplication_fulllength(amplicon_file, minseqlen, mincount)
-    kmer_dict = {}
-    mates_list = []
+    seq_occu = list(dereplication_fulllength(amplicon_file, minseqlen, mincount))
+    kmer_dict = get_unique_kmer({}, seq_occu[0][0], 0, kmer_size)
+    kmer_dict = get_unique_kmer(kmer_dict, seq_occu[1][0], 1, kmer_size)
+    
     mates = []
-    com = []
-    id_mat = []
+    
  
     for index, item in enumerate(seq_occu):
         chimera = False
         chunk_list = get_chunks(item[0], chunk_size)
+        mates_list = []
+        id_mat = []
+        parent1_chunk = []
+        parent2_chunk = []
+
         for chunk in chunk_list:
-            mates_list.append(search_mates(kmer_dict, chunk, kmer_size))
+            mates_list.append(sorted(search_mates(kmer_dict, chunk, kmer_size)))
+
         
+        for chunk_parent in mates_list:
+            parent1_chunk.append(get_chunks(seq_occu[chunk_parent[0]][0],chunk_size))
+            parent2_chunk.append(get_chunks(seq_occu[chunk_parent[1]][0],chunk_size))
 
         for mates in mates_list:
             if len(mates) >= 2:
-                for _ in range(len(chunk_list)):
-                    align_p1 = nw.global_align(item[0], chunk_list[mates[0]], 
+                for chunk_id in range(len(chunk_list)):
+                    align_p1 = nw.global_align(chunk_list[chunk_id], parent1_chunk[chunk_id][chunk_id], 
                         gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
                     perc_id_p1 = get_identity(align_p1)
-                    align_p2 = nw.global_align(item[0], chunk_list[mates[1]], 
+                    align_p2 = nw.global_align(chunk_list[chunk_id], parent2_chunk[chunk_id][chunk_id], 
                         gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
                     perc_id_p2 = get_identity(align_p2)
                     id_mat.append([perc_id_p1, perc_id_p2])
-                print(id_mat)
                 chimera = detect_chimera(id_mat)
-                print('here')
-        kmer_dict = get_unique_kmer(kmer_dict, item[0], index, kmer_size)
         if not chimera :
+            kmer_dict = get_unique_kmer(kmer_dict, item[0], index, kmer_size)
             yield([item[0], item[1]])
-
 
 
 
